@@ -28,6 +28,7 @@ const DIRT_RM_TID = 161;
 const DIRT_LM_TID = 189;
 
 
+
 let config = {
 	parent: 'phaser-game',
 	type: Phaser.CANVAS,

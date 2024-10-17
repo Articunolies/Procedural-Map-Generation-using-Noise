@@ -39,8 +39,14 @@ class mapgeneration extends Phaser.Scene
 		this.DIRT_RM = 161;
 		this.DIRT_LM = 189;
 
-		this.CIRCLETREE = 103;
+		//decorations
+		this.CIRCLETREE = 103; // 103
+		this.BROWNMUSHROOM = 48;
+		this.REDMUSHROOM = 62;
+		this.SMALLTREE = 163; 
+		this.POINTTREE = 178;
 
+		this.decorationlist = [this.CIRCLETREE, this.BROWNMUSHROOM, this.REDMUSHROOM, this.SMALLTREE, this.POINTTREE];
 
 		this.xOffset = 0;				
 		this.yOffset = 0;				
@@ -71,7 +77,6 @@ class mapgeneration extends Phaser.Scene
 		// Set noise seed
 		noise.seed(Math.random());
 
-		this.generateDecorationData();
 		// Generate initial map/texture
 		this.generate();
 
@@ -228,7 +233,7 @@ class mapgeneration extends Phaser.Scene
 		// Decoration data
         this.decorationData = [];
         for (let y = 0; y < this.MAP_WIDTH; y++) {
-            this.decorationData[y] = Array(this.MAP_WIDTH).fill(this.BLANK); // Initialize as empty
+            this.decorationData[y] = []; // Initialize as empty
         }
 
 		this.decorationMap = this.make.tilemap({
@@ -368,7 +373,6 @@ class mapgeneration extends Phaser.Scene
 			this.generateMapData();
 			this.generateGrassData();
 			this.generateDirtData();
-			this.generateDecorationData();
 			this.createMap();
 		}
 	}
@@ -480,10 +484,16 @@ class mapgeneration extends Phaser.Scene
 				else {																	// dirt
 					this.mapData[y][x] = dirtTileID;
 				}
-
+				//Randomly place trees on grass tiles
+				if (this.mapData[y][x] == grassTileID && Math.random() < 0.1) {
+					// Randomly choose a a decoration to place from the list
+					const decoration = this.decorationlist[Math.floor(Math.random() * this.decorationlist.length)];
+					this.decorationData[y][x] = decoration;
+				}
 			}
 		}
 	}
+
 
 	generateGrassData()
 	{
@@ -609,25 +619,6 @@ class mapgeneration extends Phaser.Scene
 		}
 	}
 	
-	// Randomly place decorations
-    generateDecorationData() {
-
-        const treeProbability = 0.05; // 5% chance to place a tree on grass
-
-        for (let y = 0; y < this.MAP_WIDTH; y++) {
-            for (let x = 0; x < this.MAP_WIDTH; x++) {
-                if (this.mapData[y][x] === this.GRASS) {
-                    // Randomly place a tree based on probability
-                    if (Math.random() < treeProbability) {
-                        this.decorationData[y][x] = this.CIRCLETREE; // Place the tree on the decoration layer
-                    }
-                }
-            }
-        }
-
-        // Redraw the decoration layer with the trees
-        this.decorationLayer = this.decorationMap.createLayer(0, this.tileset, 0, 0);
-    }
 
 	createMap()
 	{
