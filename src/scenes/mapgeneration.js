@@ -1,5 +1,6 @@
 class mapgeneration extends Phaser.Scene
 {
+	//Github Pages Fix?
 	// Noise Parameters:
 	xOffset = 0;				// less = left, more = right
 	yOffset = 0;				// less = down, more = up
