@@ -1,192 +1,42 @@
 class mapgeneration extends Phaser.Scene
 {
+	// Noise Parameters:
+	xOffset = 0;				// less = left, more = right
+	yOffset = 0;				// less = down, more = up
+	frequency = 0.105;			// less = less diversity/zoom in, more = more diversity/zoom out
+	fbmEnabled = true;			// "Fractional Brownian Motion"
+	numOctaves = 4;				// less = simpler, more = more complicated
+	textureEnabled = false;		// refers to the perlin noise texture behind the tile-based map
+	rtf = 1;					// "range transformation formula"; 1 = (n+1)/2, 2 = |n|
+
+	// Control Parameters:
+	largeOffsetChange = 5;
+	smallOffsetChange = 1;
+	largeFrequencyChange = 0.1;
+	smallFrequencyChange = 0.01;
+
+	// Map Constants:
+	waterWeight = 2;
+	grassWeight = 1;
+	dirtWeight = 1;
 
 	// Methods:
 	constructor() {
-		super("mapgenerationscene");
+		super("proceduralMapGenerationScene");
 	}
 
 	preload()
 	{
-		// Set load path and load map pack
 		this.load.path = './assets/';
 		this.load.image("map pack", "mapPack_spritesheet.png");
 	}
 
 	create()
 	{
-		this.MAP_WIDTH = 30;
-		this.TILE_WIDTH = 64;
-
-		this.BLANK = 195;		// blank
-		this.WATER = 56;		// water
-		this.GRASS = 40;		// grass
-		this.GRASS_BR = 11;
-		this.GRASS_BM = 25;
-		this.GRASS_BL = 39;
-		this.GRASS_TR = 41;
-		this.GRASS_TM = 55;
-		this.GRASS_TL = 69;
-		this.GRASS_RM = 26;
-		this.GRASS_LM = 54;
-		this.DIRT = 175;		// dirt
-		this.DIRT_BR = 146;
-		this.DIRT_BM = 160;
-		this.DIRT_BL = 174;
-		this.DIRT_TR = 176;
-		this.DIRT_TM = 190;
-		this.DIRT_TL = 9;
-		this.DIRT_RM = 161;
-		this.DIRT_LM = 189;
-
-		//decorations
-		this.CIRCLETREE = 103; // 103
-		this.BROWNMUSHROOM = 48;
-		this.REDMUSHROOM = 62;
-		this.SMALLTREE = 163; 
-		this.POINTTREE = 178;
-
-		this.decorationlist = [this.CIRCLETREE, this.BROWNMUSHROOM, this.REDMUSHROOM, this.SMALLTREE, this.POINTTREE];
-
-		this.xOffset = 0;				
-		this.yOffset = 0;				
-		this.frequency = 0.105;		
-		this.fbmEnabled = true;		
-		this.numOctaves = 4;				
-		this.rtf = 1;				
-		this.textureEnabled = false;
-
-		// Map Parameters:
-		this.waterWeight = 2;
-		this.grassWeight = 1;
-		this.dirtWeight = 1;
-
-
-		// Control Parameters:
-		this.largeOffsetChange = 5;
-		this.smallOffsetChange = 1;
-		this.largeFrequencyChange = 0.1;
-		this.smallFrequencyChange = 0.01;
-		//Variables
-
-
-		// Initialize things
 		this.initializeVariables();
 		this.initializeControls();
-
-		// Set noise seed
 		noise.seed(Math.random());
-
-		// Generate initial map/texture
 		this.generate();
-
-		this.grammar = tracery.createGrammar({
-			townName: [
-			  "#prefix##suffix#",
-			  "#prefix##name#",
-			  "#adjective# #place#",
-			  "#name##suffix#",
-			],
-			prefix: [
-			  "San",
-			  "Green",
-			  "Silver",
-			  "Red",
-			  "Iron",
-			  "Santa",
-			  "New",
-			  "Old",
-			  "East",
-			  "West",
-			  "North",
-			  "South",
-			  "Port",
-			  "Saint",
-			  "Fort",
-			  "Mount",
-			  "Spring",
-			  "Summer",
-			  "Winter",
-			  "Autumn",
-			  "Golden",
-			  "Crystal",
-			  "Emerald",
-			  "Ruby",
-			  "Sapphire",
-			  "Diamond",
-			  "Pearl",
-			  "Lavender",
-			],
-			suffix: [
-			  "town",
-			  "vale",
-			  "burg",
-			  "ridge",
-			  "haven",
-			  "ford",
-			  "ham",
-			  "ton",
-			  "field",
-			  "wood",
-			  "bridge",
-			  "port",
-			  "mouth",
-			],
-			adjective: [
-			  "Lonely",
-			  "Silent",
-			  "Forgotten",
-			  "Shimmering",
-			  "Windy",
-			  "Breezy",
-			  "Sunny",
-			  "Rainy",
-			  "Misty",
-			  "Foggy",
-			  "Snowy",
-			  "Icy",
-			  "Hot",
-			  "Cold",
-			  "Warm",
-			  "Gloomy",
-			  "Dark",
-			  "Bright",
-			  "Glowing",
-			  "Shining",
-			  "Dusty",
-			  "Sandy",
-			  "Rocky",
-			  "Muddy",
-			  "Leafy",
-			  "Flowery",
-			  "Grassy",
-			  "Mossy",
-			  "Soggy",
-			  "Dry",
-			  "Wet",
-			  "Damp",
-			  "Chilly",
-			  "Cool",
-			  "Stormy",
-			  "Calm",
-			  "Peaceful",
-			  "Quiet",
-			  "Busy",
-			  "Active",
-			  "Sleepy",
-			],
-			place: ["Atoll", "Peak", "Valley", "Shore", "Island"],
-			name: [
-			  "Haven",
-			  "Wood",
-			  "Bridge",
-			  "Field",
-			  "Grove",
-			  "Cruz",
-			  "Barbara",
-			  "Diego",
-			],
-		  });
 	}
 
 	initializeVariables()
@@ -230,18 +80,6 @@ class mapgeneration extends Phaser.Scene
 		}
 		this.dirtMap = null;
 
-		// Decoration data
-        this.decorationData = [];
-        for (let y = 0; y < this.MAP_WIDTH; y++) {
-            this.decorationData[y] = []; // Initialize as empty
-        }
-
-		this.decorationMap = this.make.tilemap({
-			data: this.decorationData,
-			tileWidth: this.TILE_WIDTH,
-			tileHeight: this.TILE_WIDTH
-		});
-		
 		// Texture
 		this.texture = [];		// contains colored squares whose colors are derived from the perlin data
 		for (let y = 0; y < MAP_WIDTH; y++) {
@@ -255,17 +93,43 @@ class mapgeneration extends Phaser.Scene
 		this.startingXOffset = this.xOffset;
 		this.startingYOffset = this.yOffset;
 		this.startingFrequency = this.frequency;
+		this.startingFBMEnabled = this.fbmEnabled;
+		this.startingNumOctaves = this.numOctaves;
+		this.startingTextureEnabled = this.textureEnabled;
+		this.startingRTF = this.rtf;
 
 		// Initialize input keys
 		this.moveUpKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
 		this.moveDownKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
 		this.moveLeftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
 		this.moveRightKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
-		this.increaseZoom = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.PERIOD);
-		this.decreaseZoom = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.COMMA);
-		this.randomizeSeedKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+		this.increaseFrequencyKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.PERIOD);
+		this.decreaseFrequencyKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.COMMA);
 		this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+		this.toggleFBMKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+		this.increaseOctavesKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+		this.decreaseOctavesKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+		this.toggleTextureKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.T);
+		this.switchRTFKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.G);
+		this.resetChangesKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C);
+		this.randomizeSeedKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
 
+		// Display controls
+		const controls = `
+		<h2>Controls (open console recommended)</h2>
+		Move: WASD | SHIFT + WASD <br>
+		Zoom (change frequency): COMMA/PERIOD | SHIFT + COMMA/PERIOD <br>
+		<br>
+		Toggle FBM: F <br>
+		Change Octaves: Q/E <br>
+		<br>
+		Toggle Texture: T <br>
+		Switch Range Transformation Formula: G <br>
+		<br>
+		Reset Changes: C <br>
+		Randomize Seed: R
+		`;
+		document.getElementById("description").innerHTML = controls;
 
 		// Create events
 		this.moveUpKey.on("down", (key, event) => {						// move up
@@ -308,8 +172,7 @@ class mapgeneration extends Phaser.Scene
 			this.generate();
 			console.log(`moved to (${this.xOffset}, ${this.yOffset})`)
 		});
-		
-		this.increaseZoom.on("down", (key, event) => {			// increase frequency
+		this.increaseFrequencyKey.on("down", (key, event) => {			// increase frequency
 
 			const mapCenterXY = MAP_WIDTH / 2;
 			const centerXBefore = (mapCenterXY + this.xOffset) * this.frequency;
@@ -329,7 +192,7 @@ class mapgeneration extends Phaser.Scene
 			console.log(`frequency = ${this.frequency}`)
 
 		});
-		this.decreaseZoom.on("down", (key, event) => {			// decrease frequency
+		this.decreaseFrequencyKey.on("down", (key, event) => {			// decrease frequency
 
 			const mapCenterXY = MAP_WIDTH / 2;
 			const centerXBefore = (mapCenterXY + this.xOffset) * this.frequency;
@@ -348,6 +211,58 @@ class mapgeneration extends Phaser.Scene
 			this.generate();
 			console.log(`frequency = ${this.frequency}`)
 		});
+		this.toggleFBMKey.on("down", (key, event) => {					// toggle FBM
+			this.fbmEnabled = !this.fbmEnabled;
+			this.generate();
+			if (this.fbmEnabled) {
+				console.log("FBM enabled");
+			}
+			else {
+				console.log("FBM disabled");
+			}
+		});
+		this.increaseOctavesKey.on("down", (key, event) => {			// increase octaves
+			this.numOctaves++;
+			this.generate();
+			console.log(`octaves = ${this.numOctaves}`);
+		});
+		this.decreaseOctavesKey.on("down", (key, event) => {			// decrease octaves
+			this.numOctaves--;
+			this.generate();
+			console.log(`octaves = ${this.numOctaves}`);
+		});
+		this.toggleTextureKey.on("down", (key, event) => {				// toggle texture
+			this.textureEnabled = !this.textureEnabled;
+			this.generate();
+			if (this.textureEnabled) {
+				console.log("showing texture");
+			}
+			else {
+				console.log("showing map");
+			}
+		});
+		this.switchRTFKey.on("down", (key, event) => {					// switch RTF
+			if (this.rtf == 1) {
+				this.rtf = 2;
+				console.log("transforming [-1, 1] to [0, 1] via n = |n|")
+			}
+			else {
+				this.rtf = 1;
+				console.log("transforming [-1, 1] to [0, 1] via n = (n-1)/2")
+			}
+			this.generate();
+		});
+		this.resetChangesKey.on("down", (key, event) => {				// reset changes
+			this.xOffset = this.startingXOffset;
+			this.yOffset = this.startingYOffset;
+			this.frequency = this.startingFrequency;
+			this.fbmEnabled = this.startingFBMEnabled;
+			this.numOctaves = this.startingNumOctaves;
+			this.rtf = this.startingRTF;
+			this.textureEnabled = this.startingTextureEnabled;
+			this.generate();
+			console.log("reset changes");
+		});
 		this.randomizeSeedKey.on("down", (key, event) => {				// randomize seed
 			noise.seed(Math.random());
 			this.generate();
@@ -357,26 +272,18 @@ class mapgeneration extends Phaser.Scene
 
 	generate()
 	{
-		//reset the map
-		this.destroyMapAndTexture();
-
-		// Generate perlin data
 		this.generatePerlinData();
-
-		// Generate map/texture
-		if (this.textureEnabled)		// generate texture
-		{
+		this.destroyMapAndTexture();
+		if (this.textureEnabled) {
 			this.generateTexture();
 		}
-		else							// generate map
-		{
+		else {
 			this.generateMapData();
 			this.generateGrassData();
 			this.generateDirtData();
-			this.createMap();
+			this.createMaps();
 		}
 	}
-
 
 	generatePerlinData()
 	{
@@ -412,11 +319,11 @@ class mapgeneration extends Phaser.Scene
 	}
 	transformRange(value)
 	{
-		if (this.rtf == 1) {
+		if (this.rtf == 1) {				// function from the perlin noise article
 			return (value + 1) / 2;
 		}
 		else {
-			return Math.abs(value);
+			return Math.abs(value);			// function used in the perlin noise library example
 		}
 	}
 
@@ -429,13 +336,6 @@ class mapgeneration extends Phaser.Scene
 		}
 		if (this.dirtMap != null) {
 			this.dirtMap.destroy();			// also destroys any layers
-		}
-
-		console.log("destroyed maps");
-		console.log(this.decorationMap != null);
-		if (this.decorationMap != null) {
-			console.log("destroying decoration map");
-			this.decorationMap.destroy();			// also destroys any layers
 		}
 
 		// Texture
@@ -464,37 +364,24 @@ class mapgeneration extends Phaser.Scene
 
 	generateMapData()
 	{
-		// Set constants
-		const waterTileID = 56;
-		const grassTileID = 40;
-		const dirtTileID = 105;
-		const totalWeight = this.waterWeight + this.grassWeight + this.dirtWeight;
-
 		// Use the perlin data to set the tile type
 		for (let y = 0; y < MAP_WIDTH; y++) {
 			for (let x = 0; x < MAP_WIDTH; x++) {
 
 				const value = this.perlinData[y][x];
-				if (value < this.waterWeight/totalWeight) {								// water
-					this.mapData[y][x] = waterTileID;
+				if (value < this.waterWeight/this.totalWeight) {								// water
+					this.mapData[y][x] = WATER_TID;
 				}
-				else if (value < (this.waterWeight+this.grassWeight)/totalWeight) {		// grass
-					this.mapData[y][x] = grassTileID;
+				else if (value < (this.waterWeight+this.grassWeight)/this.totalWeight) {		// grass
+					this.mapData[y][x] = GRASS_TID;
 				}
-				else {																	// dirt
-					this.mapData[y][x] = dirtTileID;
+				else {																			// dirt
+					this.mapData[y][x] = DIRT_TID;
 				}
-				//Randomly place trees on grass tiles
-				if (this.mapData[y][x] == grassTileID && Math.random() < 0.1) {
-					// Randomly choose a a decoration to place from the list
-					const decoration = this.decorationlist[Math.floor(Math.random() * this.decorationlist.length)];
-					this.decorationData[y][x] = decoration;
-				}
+
 			}
 		}
 	}
-
-
 	generateGrassData()
 	{
 		// Set grassData to be mapData but only the grass
@@ -512,7 +399,6 @@ class mapgeneration extends Phaser.Scene
 
 		this.generateGrassTransitionTiles();
 	}
-
 	generateGrassTransitionTiles()
 	{
 		// loop over the tiles of grassData
@@ -556,7 +442,6 @@ class mapgeneration extends Phaser.Scene
 			}
 		}
 	}
-
 	generateDirtData()
 	{
 		// Set dirtData to be mapData but only the dirt
@@ -573,7 +458,6 @@ class mapgeneration extends Phaser.Scene
 
 		this.generateDirtTransitionTiles();
 	}
-
 	generateDirtTransitionTiles()
 	{
 		// loop over the tiles of dirtData
@@ -618,9 +502,7 @@ class mapgeneration extends Phaser.Scene
 			}
 		}
 	}
-	
-
-	createMap()
+	createMaps()
 	{
 		this.waterLayer.setVisible(true);
 
@@ -637,12 +519,5 @@ class mapgeneration extends Phaser.Scene
 			tileHeight: TILE_WIDTH
 		});
 		const dirtLayer = this.dirtMap.createLayer(0, this.tileset, 0, 0);
-
-		this.decorationMap = this.make.tilemap({
-			data: this.decorationData,
-			tileWidth: TILE_WIDTH,
-			tileHeight: TILE_WIDTH
-		});
-		const decorationLayer = this.decorationMap.createLayer(0, this.tileset, 0, 0);
 	}
 }
